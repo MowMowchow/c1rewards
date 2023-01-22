@@ -1,0 +1,43 @@
+handleCalculateRewards:
+  handler: bin/handleCalculateRewards
+  runtime: go1.x
+  timeout: 10
+  package:
+    patterns:
+      - "!./*"
+      - "bin/handleCalculateRewards"
+
+  events:
+    - httpApi:
+        method: POST
+        path: /getRewards
+        # cors: true
+
+  role: { "Fn::GetAtt": ["HandleCalculateRewardsLambdaRole", "Arn"] }
+
+supportingResources:
+  Resources:
+    HandleCalculateRewardsLambdaRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - "lambda.amazonaws.com"
+              Action:
+                - "sts:AssumeRole"
+        Policies:
+          - PolicyName: "HandleCalculateRewardsLambdaLogPolicy"
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "logs:CreateLogGroup"
+                    - "logs:CreateLogStream"
+                    - "logs:PutLogEvents"
+                  Resource:
+                    - "*"
