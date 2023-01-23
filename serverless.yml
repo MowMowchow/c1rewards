@@ -5,6 +5,8 @@ package:
   exclude:
     - node_modules/**
     - venv/**
+    - web/c1rewards/node_modules/**
+    - web/c1rewards/venv/**
 
 configValidationMode: error
 
@@ -14,7 +16,7 @@ provider:
   stage: dev
   region: us-east-1
 
-custom:
+# custom:
 
 resources:
   # lambda resources

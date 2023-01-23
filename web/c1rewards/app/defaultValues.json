@@ -1,0 +1,115 @@
+{
+  "transactions": [
+    {
+      "name": "T01",
+      "date": "2021-05-01",
+      "merchant_code": "sportcheck",
+      "amount_cents": 21000
+    },
+    {
+      "name": "T02",
+      "date": "2021-05-02",
+      "merchant_code": "sportcheck",
+      "amount_cents": 8700
+    },
+    {
+      "name": "T03",
+      "date": "2021-05-03",
+      "merchant_code": "tim_hortons",
+      "amount_cents": 323
+    },
+    {
+      "name": "T04",
+      "date": "2021-05-04",
+      "merchant_code": "tim_hortons",
+      "amount_cents": 1267
+    },
+    {
+      "name": "T05",
+      "date": "2021-05-05",
+      "merchant_code": "tim_hortons",
+      "amount_cents": 2116
+    },
+    {
+      "name": "T06",
+      "date": "2021-05-06",
+      "merchant_code": "tim_hortons",
+      "amount_cents": 2211
+    },
+    {
+      "name": "T07",
+      "date": "2021-05-07",
+      "merchant_code": "subway",
+      "amount_cents": 1853
+    },
+    {
+      "name": "T08",
+      "date": "2021-05-08",
+      "merchant_code": "subway",
+      "amount_cents": 2153
+    },
+    {
+      "name": "T09",
+      "date": "2021-05-09",
+      "merchant_code": "sportcheck",
+      "amount_cents": 7326
+    },
+    {
+      "name": "T10",
+      "date": "2021-05-10",
+      "merchant_code": "tim_hortons",
+      "amount_cents": 1321
+    }
+  ],
+  "rules": [
+    {
+      "name": "rule 1",
+      "points": 500,
+      "merchants": {
+        "sportcheck": 7500,
+        "tim_hortons": 2500,
+        "subway": 2500
+      }
+    },
+    {
+      "name": "rule 2",
+      "points": 300,
+      "merchants": {
+        "sportcheck": 7500,
+        "tim_hortons": 2500
+      }
+    },
+    {
+      "name": "rule 3",
+      "points": 200,
+      "merchants": {
+        "sportcheck": 7500
+      }
+    },
+    {
+      "name": "rule 4",
+      "points": 150,
+      "merchants": {
+        "sportcheck": 2500,
+        "tim_hortons": 1000,
+        "subway": 1000
+      }
+    },
+    {
+      "name": "rule 5",
+      "points": 75,
+      "merchants": {
+        "sportcheck": 2500,
+        "tim_hortons": 1000,
+        "subway": 1000
+      }
+    },
+    {
+      "name": "rule 6",
+      "points": 75,
+      "merchants": {
+        "sportcheck": 2000
+      }
+    }
+  ]
+}

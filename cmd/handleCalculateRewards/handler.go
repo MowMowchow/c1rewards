@@ -21,7 +21,7 @@ func (h *Handler) HandleRequest(request events.APIGatewayProxyRequest) (events.A
 	err := json.Unmarshal([]byte(request.Body), &requestBody)
 	if err != nil {
 		errMsg := "error unmarshalling response body from calculate transaction request"
-		log.Println(errMsg)
+		log.Println(errMsg, err)
 		return responses.ServerError(errMsg), fmt.Errorf(errMsg)
 	}
 
@@ -192,7 +192,7 @@ func (h *Handler) HandleRequest(request events.APIGatewayProxyRequest) (events.A
 	responseBody, err := json.Marshal(outTransactionGroups)
 	if err != nil {
 		errMsg := ("error marshalling calculate rewards to response body")
-		log.Println(errMsg)
+		log.Println(errMsg, err)
 		return responses.ServerError(err), fmt.Errorf(errMsg)
 	}
 
