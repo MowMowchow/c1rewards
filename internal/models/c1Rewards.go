@@ -5,7 +5,7 @@ type Transaction struct {
 	Date         string `json:"date,omitempty"`
 	MerchantCode string `json:"merchant_code,omitempty"`
 	AmountCents  int    `json:"amount_cents,omitempty"`
-	MaxRewards   int    `json:"max_rewards ,omitempty"`
+	MaxRewards   int    `json:"max_rewards,omitempty"`
 }
 
 type TransactionsSummary struct {
