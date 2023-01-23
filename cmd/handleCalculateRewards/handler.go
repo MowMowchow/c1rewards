@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sort"
+	"strings"
 
 	"github.com/MowMowchow/c1rewards/internal/models"
 	"github.com/MowMowchow/c1rewards/internal/responses"
@@ -26,29 +28,19 @@ func (h *Handler) HandleRequest(request events.APIGatewayProxyRequest) (events.A
 	if requestBody.Transactions == nil {
 		errMsg := "transactions object does not exist in request"
 		log.Println(errMsg)
-		return responses.ServerError(errMsg), fmt.Errorf(errMsg)
+		return responses.BadRequest(errMsg), fmt.Errorf(errMsg)
 	}
 
 	if requestBody.Rules == nil {
 		errMsg := "rules object does not exist in request"
 		log.Println(errMsg)
-		return responses.ServerError(errMsg), fmt.Errorf(errMsg)
+		return responses.BadRequest(errMsg), fmt.Errorf(errMsg)
 	}
 
-	// for time grouping:
-	// date := now.Format("20060102")
-	// fmt.Println(date)
-	// date = now.Format("2006-01-02")
-	// fmt.Println(date)
-
-	// split at "-" -> get 3 groups: [year][month][day]
-
-	var transactionsSummary models.TransactionsSummary
-	transactionsSummary.Merchants = make(map[string]int)
-	transactionsSummary.MaxCents = 0
-	for _, transaction := range requestBody.Transactions {
-		transactionsSummary.Merchants[transaction.MerchantCode] += transaction.AmountCents
-		transactionsSummary.MaxCents = utils.IntMax(transactionsSummary.MaxCents, transactionsSummary.Merchants[transaction.MerchantCode])
+	transactionList := []models.Transaction{}
+	for transactionName, transaction := range requestBody.Transactions {
+		transaction.Name = transactionName
+		transactionList = append(transactionList, transaction)
 	}
 
 	// copy to make it easier to read (visually)
@@ -117,12 +109,87 @@ func (h *Handler) HandleRequest(request events.APIGatewayProxyRequest) (events.A
 		return currBest
 	}
 
-	maxRewards := map[string]int{
-		"best": calculateMaxRewards(0, transactionsSummary, 0),
+	// sort transactions
+	sort.Slice(transactionList, func(i, j int) bool {
+		merchantIDateArr := strings.Split(transactionList[i].Date, "-")
+		merchantJDateArr := strings.Split(transactionList[j].Date, "-")
+		if merchantIDateArr[0] == merchantJDateArr[0] { // year is the same
+			if merchantIDateArr[1] == merchantJDateArr[1] { // month is the same
+				return merchantIDateArr[2] < merchantJDateArr[2] // compare days
+			} else {
+
+				return merchantIDateArr[1] < merchantJDateArr[1] // compare months
+			}
+		} else {
+
+			return merchantIDateArr[0] < merchantJDateArr[0] // compare years
+		}
+	})
+
+	transactionGroups := models.TransactionGroups{
+		Groups:   make(map[string]*models.TransactionGroup),
+		Grouping: requestBody.Grouping,
+	}
+	transactionGroups.Grouping = requestBody.Grouping
+
+	for i := 0; i < len(transactionList); i++ {
+		if transactionGroups.Grouping == "day" {
+			if _, exists := transactionGroups.Groups[transactionList[i].Date]; !exists {
+				transactionGroups.Groups[transactionList[i].Date] = &models.TransactionGroup{}
+			}
+			transactionGroups.Groups[transactionList[i].Date].Transactions = append(transactionGroups.Groups[transactionList[i].Date].Transactions, transactionList[i])
+		} else if transactionGroups.Grouping == "year" {
+			dateKey := strings.Join(strings.Split(transactionList[i].Date, "-")[:1], "-")
+			if _, exists := transactionGroups.Groups[dateKey]; !exists {
+				transactionGroups.Groups[dateKey] = &models.TransactionGroup{}
+			}
+			transactionGroups.Groups[dateKey].Transactions = append(transactionGroups.Groups[dateKey].Transactions, transactionList[i])
+		} else { // month is default case
+			dateKey := strings.Join(strings.Split(transactionList[i].Date, "-")[:2], "-")
+			if _, exists := transactionGroups.Groups[dateKey]; !exists {
+				transactionGroups.Groups[dateKey] = &models.TransactionGroup{}
+			}
+			transactionGroups.Groups[dateKey].Transactions = append(transactionGroups.Groups[dateKey].Transactions, transactionList[i])
+		}
+	}
+
+	for dateKey, transactionGroup := range transactionGroups.Groups {
+		var transactionsSummary models.TransactionsSummary
+		transactionsSummary.Merchants = make(map[string]int)
+		transactionsSummary.MaxCents = 0
+
+		for i, transaction := range transactionGroup.Transactions {
+			transactionGroups.Groups[dateKey].Transactions[i].MaxRewards = calculateMaxRewards(
+				0,
+				models.TransactionsSummary{
+					Merchants: map[string]int{
+						transaction.MerchantCode: transaction.AmountCents,
+					},
+					MaxCents: transaction.AmountCents,
+				},
+				0,
+			)
+			if _, merchantExists := transactionsSummary.Merchants[transaction.MerchantCode]; !merchantExists {
+				transactionsSummary.Merchants[transaction.MerchantCode] = 0
+			}
+			transactionsSummary.MaxCents = utils.IntMax(transactionsSummary.MaxCents, transaction.AmountCents)
+			transactionsSummary.Merchants[transaction.MerchantCode] += transaction.AmountCents
+			transactionGroups.Groups[dateKey].MaxRewards = utils.IntMax(transactionsSummary.MaxCents, transactionsSummary.Merchants[transaction.MerchantCode])
+		}
+		transactionGroups.Groups[dateKey].MaxRewards = calculateMaxRewards(0, transactionsSummary, 0)
+	}
+
+	outTransactionGroups := models.OutTransactionGroups{
+		Groups:   make(map[string]models.TransactionGroup),
+		Grouping: transactionGroups.Grouping,
+	}
+	outTransactionGroups.Grouping = transactionGroups.Grouping
+	for date, group := range transactionGroups.Groups {
+		outTransactionGroups.Groups[date] = *group
 	}
 
 	// package request body
-	responseBody, err := json.Marshal(maxRewards)
+	responseBody, err := json.Marshal(outTransactionGroups)
 	if err != nil {
 		errMsg := ("error marshalling calculate rewards to response body")
 		log.Println(errMsg)
