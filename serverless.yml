@@ -1,0 +1,25 @@
+service: c1rewards
+
+package:
+  individually: true
+  exclude:
+    - node_modules/**
+    - venv/**
+
+configValidationMode: error
+
+provider:
+  name: aws
+  runtime: go1.x
+  stage: dev
+  region: us-east-1
+
+custom:
+
+resources:
+  # lambda resources
+  - ${file(./internal/aws/handleCalculateRewards.yml):supportingResources}
+
+functions:
+  # lambda resources
+  - handleCalculateRewards: ${file(./internal/aws/handleCalculateRewards.yml):handleCalculateRewards}

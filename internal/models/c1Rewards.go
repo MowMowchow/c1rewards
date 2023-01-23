@@ -11,13 +11,9 @@ type TransactionsSummary struct {
 	MaxCents  int
 }
 
-type RewardMerchant struct {
-	Cost   int `json:"cost,omitempty"`
-	Points int `json:"points,omitempty"`
-}
-
 type RewardRule struct {
-	Merchants map[string]RewardMerchant `json:"merchants,omitempty"`
+	Merchants map[string]int `json:"merchants,omitempty"` // [merchantName]cost
+	Points    int            `json:"points,omitempty"`    // points earned from deal
 }
 
 type Rules struct {
