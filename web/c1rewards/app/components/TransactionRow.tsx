@@ -15,7 +15,6 @@ export default function TransactionRow({
   amount_cents,
   deleteTransaction,
 }: TransactionRowProps) {
-  console.log("TRANSACTION ROW", name, date, merchant_code, amount_cents);
   return (
     <li className="my-2 border-2 rounded-md shadow-sm">
       <div className="grid grid-cols-5 m-2">

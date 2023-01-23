@@ -10,7 +10,6 @@ export default function TransactionGroupRow({
   date,
   transactiongroup,
 }: TransactionGroupRowProps) {
-  console.log("TRANSACTION GROUP", transactiongroup);
   return (
     <li className="my-2 border-2 rounded-md shadow-sm">
       <div className="m-2 flex flex-row justify-start">
