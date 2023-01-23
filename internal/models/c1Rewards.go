@@ -36,5 +36,5 @@ type TransactionGroup struct {
 
 type TransactionGroups struct {
 	Grouping string
-	Groups   []TransactionGroup
+	Groups   map[string]TransactionGroup
 }
