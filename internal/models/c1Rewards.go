@@ -1,11 +1,11 @@
 package models
 
 type Transaction struct {
+	Name         string `json:"name,omitempty"`
 	Date         string `json:"date,omitempty"`
 	MerchantCode string `json:"merchant_code,omitempty"`
 	AmountCents  int    `json:"amount_cents,omitempty"`
-	Name         string
-	MaxRewards   int
+	MaxRewards   int    `json:"max_rewards ,omitempty"`
 }
 
 type TransactionsSummary struct {
@@ -14,6 +14,7 @@ type TransactionsSummary struct {
 }
 
 type RewardRule struct {
+	Name      string         `json:"name,omitempty"`
 	Merchants map[string]int `json:"merchants,omitempty"` // [merchantName]cost
 	Points    int            `json:"points,omitempty"`    // points earned from deal
 }
