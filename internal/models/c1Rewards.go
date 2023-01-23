@@ -1,9 +1,11 @@
 package models
 
+import "time"
+
 type Transaction struct {
-	Date         string `json:"date,omitempty"`
-	MerchantCode string `json:"merchant_code,omitempty"`
-	AmountCents  int    `json:"amount_cents,omitempty"`
+	Date         time.Time `json:"date,omitempty"`
+	MerchantCode string    `json:"merchant_code,omitempty"`
+	AmountCents  int       `json:"amount_cents,omitempty"`
 }
 
 type TransactionsSummary struct {
@@ -24,4 +26,5 @@ type Rules struct {
 type CalculateTransactionRequest struct {
 	Transactions map[string]Transaction `json:"transactions,omitempty"`
 	Rules        []RewardRule           `json:"rules,omitempty"`
+	Grouping     string                 `json:"grouping,omitempty"`
 }
