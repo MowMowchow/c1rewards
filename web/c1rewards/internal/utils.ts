@@ -27,7 +27,5 @@ export const formatMaximumRewardsRequest = (
     rules: ruleMapping,
   };
 
-  console.log("REQUEST BODY:", maximumRewardsRequestBody);
-
   return maximumRewardsRequestBody;
 };

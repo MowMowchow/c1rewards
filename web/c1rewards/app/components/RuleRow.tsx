@@ -3,7 +3,7 @@ import { Rule } from "../../internal/models";
 export type RuleRowProps = {
   name?: string;
   points: number;
-  merchants: string[];
+  merchants: Map<string, number>;
   deleteRule?: (ruleName: string) => void;
 };
 
@@ -14,26 +14,33 @@ export default function RuleRow({
   deleteRule,
 }: RuleRowProps) {
   return (
-    <li className="my-2 border-2 rounded-md w-fit shadow-sm">
-      <div className="m-2 flex flex-row justify-start">
-        <div className="mx-4">
+    <li className="my-2 border-2 rounded-md shadow-sm">
+      <div className="m-2 flex flex-row justify-around">
+        <div className="mx-2 w-2/12 flex flex-col justify-center items-center">
           <h1>{`Name: ${name}`}</h1>
         </div>
-        <div className="mx-4">
+        <div className="mx-2 w-2/12 flex flex-col justify-center items-center">
           <h1>{`Points: ${points}`}</h1>
         </div>
-        <div className="mx-4">
-          <h1>{`Merchants: ${merchants}`}</h1>
+        <div className="mx-2 w-4/12 flex flex-col justify-center items-center">
+          <ul>
+            {Array.from(merchants.entries()).map(([name, cost]) => (
+              <li className="grid grid-cols-2 space-x-8">
+                <p>{`Name: ${name}`}</p>
+                <p>{`Cost: ${cost}`}</p>
+              </li>
+            ))}
+          </ul>
         </div>
-        <div className="mx-4">
+        <div className="mx-2 w-2/12 flex flex-col justify-center items-center">
           {deleteRule === undefined || name === undefined ? (
             <></>
           ) : (
             <button
-              className="py-1 px-2 rounded-md bg-rose-400"
+              className="py-1 px-2 shadow-md rounded-md bg-rose-400"
               onClick={() => deleteRule(name)}
             >
-              delete
+              <h1 className="text-md text-stone-50">delete</h1>
             </button>
           )}
         </div>
