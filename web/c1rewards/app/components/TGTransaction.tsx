@@ -33,7 +33,7 @@ export default function TGTransactionRow({
         {max_rewards ? (
           <h1>{`Max Rewards: ${max_rewards}`}</h1>
         ) : (
-          <h1>No Reward Aavailable</h1>
+          <h1>No Reward Available</h1>
         )}
 
         <div className="mx-4 flex flex-col justify-center items-center">
