@@ -25,6 +25,7 @@ export const formatMaximumRewardsRequest = (
   const maximumRewardsRequestBody = {
     transactions: Object.fromEntries(transactionMapping),
     rules: ruleMapping,
+    grouping: "month",
   };
 
   return maximumRewardsRequestBody;

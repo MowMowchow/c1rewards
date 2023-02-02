@@ -37,7 +37,7 @@ export default function Home() {
     rule.merchants;
     defaultRules.push(tempRule);
   });
-  // const [ruleList, setRuleList] = useState<Rule[]>();
+
   const [ruleList, setRuleList] = useState<Rule[]>(defaultRules);
   const [newRule, setNewRule] = useState<Rule>({
     merchants: new Map<string, number>(),
@@ -50,19 +50,29 @@ export default function Home() {
   const [transactionGroups, setTransactionGroups] =
     useState<Map<string, TransactionGroup>>();
 
-  // const handleSubmitTransaction = (event) => {
-  //   setTransactionList((prevState) => [...prevState, event.target]);
-  // };
   const handleNewTransactionChange = (field: string, value: any) => {
-    setNewTransaction((prevState) => ({
-      ...prevState,
-      name: field === "name" ? value : prevState.name,
-      date: field === "date" ? value : prevState.date,
-      merchant_code:
-        field === "merchant_code" ? value : prevState.merchant_code,
-      amount_cents:
-        field === "amount_cents" ? Number(value) : prevState.amount_cents,
-    }));
+    switch (field) {
+      case "name":
+        setNewTransaction((prevState) => ({ ...prevState, name: value }));
+        break;
+      case "date":
+        setNewTransaction((prevState) => ({ ...prevState, date: value }));
+        break;
+      case "merchant_code":
+        setNewTransaction((prevState) => ({
+          ...prevState,
+          merchant_code: value,
+        }));
+        break;
+      case "amount_cents":
+        setNewTransaction((prevState) => ({
+          ...prevState,
+          amount_cents: value.replace(/\D/, ""),
+        }));
+        break;
+      default:
+        break;
+    }
   };
 
   const handleSubmitNewTransaction = () => {
@@ -77,20 +87,38 @@ export default function Home() {
   };
 
   const handleNewRuleChange = (field: string, value: any) => {
-    setNewRule((prevState) => ({
-      ...prevState,
-      name: field === "name" ? value : prevState.name,
-      points: field === "points" ? Number(value) : prevState.points,
-      merchants: field === "merchants" ? value : prevState.merchants,
-    }));
+    switch (field) {
+      case "name":
+        setNewRule((prevState) => ({ ...prevState, name: value }));
+        break;
+      case "points":
+        setNewRule((prevState) => ({
+          ...prevState,
+          points: value.replace(/\D/, ""),
+        }));
+        break;
+      case "merchants":
+        setNewRule((prevState) => ({ ...prevState, merchants: value }));
+        break;
+      default:
+        break;
+    }
   };
 
   const handleNewRuleMerchantChange = (field: string, value: any) => {
-    setNewRuleMerchant((prevState) => ({
-      ...prevState,
-      name: field === "name" ? value : prevState.name,
-      cost: field === "cost" ? Number(value) : prevState.cost,
-    }));
+    switch (field) {
+      case "name":
+        setNewRuleMerchant((prevState) => ({ ...prevState, name: value }));
+        break;
+      case "cost":
+        setNewRuleMerchant((prevState) => ({
+          ...prevState,
+          cost: value.replace(/\D/, ""),
+        }));
+        break;
+      default:
+        break;
+    }
   };
 
   const handleSubmitNewRule = () => {
@@ -108,13 +136,13 @@ export default function Home() {
       ...prevState,
       merchants: new Map(newRule.merchants).set(
         newRuleMerchant.name,
-        Number(newRuleMerchant.cost)
+        newRuleMerchant.cost
       ),
     }));
   };
 
   const handleDeleteTransaction = (transactionName: string) => {
-    setTransactionList((prevState) =>
+    setTransactionList(
       transactionList.filter(
         (transaction) => transaction.name !== transactionName
       )
@@ -122,9 +150,7 @@ export default function Home() {
   };
 
   const handleDeleteRule = (ruleName: string) => {
-    setRuleList((prevState) =>
-      ruleList.filter((rule) => rule.name !== ruleName)
-    );
+    setRuleList(ruleList.filter((rule) => rule.name !== ruleName));
   };
 
   const handleDeleteRuleMerchantRow = (merchantName: string) => {
@@ -364,6 +390,7 @@ export default function Home() {
                         {Array.from(newRule.merchants.entries()).map(
                           ([merchantName, merchantCost]) => (
                             <RuleMerchantRow
+                              key={merchantName}
                               name={merchantName}
                               cost={merchantCost}
                               deleteRuleMerchantRow={
@@ -414,6 +441,7 @@ export default function Home() {
                     Array.from(transactionGroups.entries()).map(
                       ([date, transactionGroup]) => (
                         <TransactionGroupRow
+                          key={date}
                           date={date}
                           transactiongroup={transactionGroup}
                         />

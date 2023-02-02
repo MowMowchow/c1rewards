@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"sort"
 	"strings"
 
+	"github.com/MowMowchow/c1rewards/internal/constants"
 	"github.com/MowMowchow/c1rewards/internal/models"
 	"github.com/MowMowchow/c1rewards/internal/responses"
 	"github.com/MowMowchow/c1rewards/internal/utils"
@@ -17,102 +17,101 @@ type Handler struct {
 }
 
 func (h *Handler) HandleRequest(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	var requestBody models.CalculateTransactionRequest
+	var requestBody models.CalculateRewardsRequest
 	err := json.Unmarshal([]byte(request.Body), &requestBody)
 	if err != nil {
 		errMsg := "error unmarshalling response body from calculate transaction request"
 		log.Println(errMsg, err)
-		return responses.ServerError(errMsg), fmt.Errorf(errMsg)
+		return responses.ServerError(), nil
 	}
 
 	if requestBody.Transactions == nil {
 		errMsg := "transactions object does not exist in request"
 		log.Println(errMsg)
-		return responses.BadRequest(errMsg), fmt.Errorf(errMsg)
+		return responses.BadRequest(), nil
 	}
-
 	if requestBody.Rules == nil {
 		errMsg := "rules object does not exist in request"
 		log.Println(errMsg)
-		return responses.BadRequest(errMsg), fmt.Errorf(errMsg)
+		return responses.BadRequest(), nil
+	}
+	if requestBody.Grouping == "" {
+		errMsg := "no grouping specified in request"
+		log.Println(errMsg)
+		return responses.BadRequest(), nil
 	}
 
-	transactionList := []models.Transaction{}
+	// copy to make it easier to read
+	transactions := []models.Transaction{}
 	for transactionName, transaction := range requestBody.Transactions {
 		transaction.Name = transactionName
-		transactionList = append(transactionList, transaction)
+		transactions = append(transactions, transaction)
 	}
 
-	// copy to make it easier to read (visually)
-	var rules models.Rules
+	// copy to make it easier to read
+	rules := []models.RewardRule{}
 	leftoverRuleCost := 1
 	leftoverRulePoints := 0
 	for _, rule := range requestBody.Rules {
-		rules.Rules = append(rules.Rules, rule)
-		if _, exists := rule.Merchants["any"]; exists {
-			leftoverRuleCost = rule.Merchants["any"]
+		rules = append(rules, rule)
+		if _, exists := rule.Merchants[constants.AnyMerchant]; exists {
+			leftoverRuleCost = rule.Merchants[constants.AnyMerchant]
 			leftoverRulePoints = rule.Points
 		}
 	}
-	rules.Length = len(rules.Rules)
 
 	var calculateMaxRewards func(int, models.TransactionsSummary, int) int
 	calculateMaxRewards = func(currPoints int, currTransactionsSummary models.TransactionsSummary, ruleInd int) int {
 		// Check if we've gone through all the rules
-		currBest := 0
-		if ruleInd == rules.Length {
+		if ruleInd == len(rules) {
 			totalLeftoverMoney := 0
 			for _, leftoverMoney := range currTransactionsSummary.Merchants {
 				totalLeftoverMoney += leftoverMoney
 			}
 			return currPoints + int(totalLeftoverMoney/leftoverRuleCost)*leftoverRulePoints
 		}
+
+		currMaxRewards := 0
 		cost := 0
 		pointsEarned := 0
-		var canUseReward bool
-
+		var canUseRule bool
 		// uses: how many times we use the rule
-		for uses := 0; uses < currTransactionsSummary.MaxCents; uses++ {
-			canUseReward = true
+		for uses := 0; uses < currTransactionsSummary.MaxCentsSpent; uses++ {
+			canUseRule = true
 			newTransactionsSummary := models.TransactionsSummary{
-				Merchants: make(map[string]int),
-				MaxCents:  int(currTransactionsSummary.MaxCents),
+				Merchants:     make(map[string]int),
+				MaxCentsSpent: currTransactionsSummary.MaxCentsSpent,
 			}
 			// copy current transation summary to new transaction summary
 			for merchant, merchantCost := range currTransactionsSummary.Merchants {
 				newTransactionsSummary.Merchants[merchant] = merchantCost
 			}
-			newTransactionsSummary.MaxCents = int(currTransactionsSummary.MaxCents)
 			// iterate over all merchants required in the rule
-			for merchant, merchantCost := range rules.Rules[ruleInd].Merchants {
-				cost = merchantCost * uses
-				pointsEarned = rules.Rules[ruleInd].Points * uses
-				// check if the merchant exists is the transaction summary
-				if _, merchantExists := currTransactionsSummary.Merchants[merchant]; merchantExists {
-					// check if we've spent enough at this merchant to use this rule
-					if currTransactionsSummary.Merchants[merchant] >= cost {
-						newTransactionsSummary.Merchants[merchant] -= cost
-					} else {
-						canUseReward = false
-					}
+			for merchant, merchantCost := range rules[ruleInd].Merchants {
+				cost = merchantCost * uses // required expenditure
+				// check if the merchant exists is the transaction summary AND if we've spent enough at this merchant to use this rule
+				if _, merchantExists := currTransactionsSummary.Merchants[merchant]; merchantExists && currTransactionsSummary.Merchants[merchant] >= cost {
+					newTransactionsSummary.Merchants[merchant] -= cost
 				} else {
-					canUseReward = false
+					canUseRule = false
 				}
 			}
-			if canUseReward {
-				currBest = utils.IntMax(currBest, calculateMaxRewards(currPoints+pointsEarned, newTransactionsSummary, ruleInd+1))
+
+			pointsEarned = rules[ruleInd].Points * uses
+			if canUseRule {
+				currMaxRewards = utils.IntMax(currMaxRewards, calculateMaxRewards(currPoints+pointsEarned, newTransactionsSummary, ruleInd+1))
 			} else {
-				currBest = utils.IntMax(currBest, calculateMaxRewards(currPoints, newTransactionsSummary, ruleInd+1))
+				currMaxRewards = utils.IntMax(currMaxRewards, calculateMaxRewards(currPoints, newTransactionsSummary, ruleInd+1))
 				break
 			}
 		}
-		return currBest
+		return currMaxRewards
 	}
 
 	// sort transactions
-	sort.Slice(transactionList, func(i, j int) bool {
-		merchantIDateArr := strings.Split(transactionList[i].Date, "-")
-		merchantJDateArr := strings.Split(transactionList[j].Date, "-")
+	sort.Slice(transactions, func(i, j int) bool {
+		merchantIDateArr := strings.Split(transactions[i].Date, "-")
+		merchantJDateArr := strings.Split(transactions[j].Date, "-")
 		if merchantIDateArr[0] == merchantJDateArr[0] { // year is the same
 			if merchantIDateArr[1] == merchantJDateArr[1] { // month is the same
 				return merchantIDateArr[2] < merchantJDateArr[2] // compare days
@@ -132,68 +131,76 @@ func (h *Handler) HandleRequest(request events.APIGatewayProxyRequest) (events.A
 	}
 	transactionGroups.Grouping = requestBody.Grouping
 
-	for i := 0; i < len(transactionList); i++ {
-		if transactionGroups.Grouping == "day" {
-			if _, exists := transactionGroups.Groups[transactionList[i].Date]; !exists {
-				transactionGroups.Groups[transactionList[i].Date] = &models.TransactionGroup{}
-			}
-			transactionGroups.Groups[transactionList[i].Date].Transactions = append(transactionGroups.Groups[transactionList[i].Date].Transactions, transactionList[i])
-		} else if transactionGroups.Grouping == "year" {
-			dateKey := strings.Join(strings.Split(transactionList[i].Date, "-")[:1], "-")
+	for i := 0; i < len(transactions); i++ {
+		switch transactionGroups.Grouping {
+		case constants.TransactionGroupingYear:
+			dateKey := strings.Join(strings.Split(transactions[i].Date, "-")[:1], "-")
 			if _, exists := transactionGroups.Groups[dateKey]; !exists {
 				transactionGroups.Groups[dateKey] = &models.TransactionGroup{}
 			}
-			transactionGroups.Groups[dateKey].Transactions = append(transactionGroups.Groups[dateKey].Transactions, transactionList[i])
-		} else { // month is default case
-			dateKey := strings.Join(strings.Split(transactionList[i].Date, "-")[:2], "-")
+			transactionGroups.Groups[dateKey].Transactions = append(transactionGroups.Groups[dateKey].Transactions, transactions[i])
+		case constants.TransactionGroupingMonth:
+			dateKey := strings.Join(strings.Split(transactions[i].Date, "-")[:2], "-")
 			if _, exists := transactionGroups.Groups[dateKey]; !exists {
 				transactionGroups.Groups[dateKey] = &models.TransactionGroup{}
 			}
-			transactionGroups.Groups[dateKey].Transactions = append(transactionGroups.Groups[dateKey].Transactions, transactionList[i])
+			transactionGroups.Groups[dateKey].Transactions = append(transactionGroups.Groups[dateKey].Transactions, transactions[i])
+		case constants.TransactionGroupingDay:
+			if _, exists := transactionGroups.Groups[transactions[i].Date]; !exists {
+				transactionGroups.Groups[transactions[i].Date] = &models.TransactionGroup{}
+			}
+			transactionGroups.Groups[transactions[i].Date].Transactions = append(transactionGroups.Groups[transactions[i].Date].Transactions, transactions[i])
+		default:
+			errMsg := "invalid grouping supplied"
+			log.Println(errMsg, err)
+			return responses.BadRequest(), nil
 		}
 	}
 
 	for dateKey, transactionGroup := range transactionGroups.Groups {
 		var transactionsSummary models.TransactionsSummary
 		transactionsSummary.Merchants = make(map[string]int)
-		transactionsSummary.MaxCents = 0
+		transactionsSummary.MaxCentsSpent = 0
 
 		for i, transaction := range transactionGroup.Transactions {
 			transactionGroups.Groups[dateKey].Transactions[i].MaxRewards = calculateMaxRewards(
+				// curr points
 				0,
+				// transaction summary containing only the current transaction
 				models.TransactionsSummary{
 					Merchants: map[string]int{
 						transaction.MerchantCode: transaction.AmountCents,
 					},
-					MaxCents: transaction.AmountCents,
+					MaxCentsSpent: transaction.AmountCents,
 				},
+				// curr rule -> 0-indexed
 				0,
 			)
 			if _, merchantExists := transactionsSummary.Merchants[transaction.MerchantCode]; !merchantExists {
 				transactionsSummary.Merchants[transaction.MerchantCode] = 0
 			}
-			transactionsSummary.MaxCents = utils.IntMax(transactionsSummary.MaxCents, transaction.AmountCents)
+			transactionsSummary.MaxCentsSpent = utils.IntMax(transactionsSummary.MaxCentsSpent, transaction.AmountCents)
 			transactionsSummary.Merchants[transaction.MerchantCode] += transaction.AmountCents
-			transactionGroups.Groups[dateKey].MaxRewards = utils.IntMax(transactionsSummary.MaxCents, transactionsSummary.Merchants[transaction.MerchantCode])
+			transactionGroups.Groups[dateKey].MaxRewards = utils.IntMax(transactionsSummary.MaxCentsSpent, transactionsSummary.Merchants[transaction.MerchantCode])
 		}
 		transactionGroups.Groups[dateKey].MaxRewards = calculateMaxRewards(0, transactionsSummary, 0)
 	}
 
-	outTransactionGroups := models.OutTransactionGroups{
+	calculateRewardsResponse := models.CalculateRewardsResponse{
 		Groups:   make(map[string]models.TransactionGroup),
 		Grouping: transactionGroups.Grouping,
 	}
-	outTransactionGroups.Grouping = transactionGroups.Grouping
+	calculateRewardsResponse.Grouping = transactionGroups.Grouping
 	for date, group := range transactionGroups.Groups {
-		outTransactionGroups.Groups[date] = *group
+		calculateRewardsResponse.Groups[date] = *group
 	}
 
-	// package request body
-	responseBody, err := json.Marshal(outTransactionGroups)
+	// package response body
+	responseBody, err := json.Marshal(calculateRewardsResponse)
 	if err != nil {
 		errMsg := ("error marshalling calculate rewards to response body")
 		log.Println(errMsg, err)
-		return responses.ServerError(err), fmt.Errorf(errMsg)
+		return responses.ServerError(), nil
 	}
 
 	return events.APIGatewayProxyResponse{

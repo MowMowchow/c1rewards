@@ -12,8 +12,8 @@ type MessageBody struct {
 }
 
 const (
-	BadRequestMessage  = "sadly your message was bad :)"
-	ServerErrorMessage = "oops :O"
+	BadRequestMessage  = "request is ill-formatted or does not contain a required field"
+	ServerErrorMessage = "oops something went wrong on our end :O"
 )
 
 func makeResponse(statusCode int, body string) events.APIGatewayProxyResponse {

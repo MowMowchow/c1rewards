@@ -110,6 +110,13 @@
       "merchants": {
         "sportcheck": 2000
       }
+    },
+    {
+      "name": "rule 7",
+      "points": 1,
+      "merchants": {
+        "anyMerchant": 1
+      }
     }
   ]
 }
